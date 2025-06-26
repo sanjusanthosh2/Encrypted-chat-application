@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Registration</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { padding: 10px; margin: 5px; }
+        #output { background: #f5f5f5; padding: 10px; margin: 10px 0; white-space: pre-wrap; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>Registration Debug Tool</h1>
+    
+    <button onclick="clearEverything()">1. Clear Everything</button>
+    <button onclick="testRegistration()">2. Test Registration</button>
+    <button onclick="checkLocalStorage()">3. Check localStorage</button>
+    <button onclick="testLogin()">4. Test Login</button>
+    
+    <div id="output"></div>
+
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            output.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+        }
+
+        function clearEverything() {
+            localStorage.clear();
+            document.getElementById('output').textContent = '';
+            log('Cleared localStorage and output');
+        }
+
+        async function testRegistration() {
+            log('=== TESTING REGISTRATION ===');
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'testuser' + Date.now(),
+                        email: 'test' + Date.now() + '@example.com',
+                        password: 'test123'
+                    })
+                });
+                
+                log('Response status: ' + response.status);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ Registration successful!');
+                    log('Response keys: ' + Object.keys(data).join(', '));
+                    log('Has access_token: ' + !!data.access_token);
+                    log('Has user: ' + !!data.user);
+                    log('Has private_key: ' + !!data.private_key);
+                    
+                    if (data.private_key) {
+                        log('Private key length: ' + data.private_key.length);
+                        log('Private key starts with: ' + data.private_key.substring(0, 50) + '...');
+                        
+                        // Store in localStorage like the registration page does
+                        localStorage.setItem('auth_token', data.access_token);
+                        localStorage.setItem('user_info', JSON.stringify(data.user));
+                        localStorage.setItem('private_key', data.private_key);
+                        
+                        log('✅ Stored data in localStorage');
+                    } else {
+                        log('❌ No private_key in response!');
+                    }
+                } else {
+                    const errorData = await response.json();
+                    log('❌ Registration failed: ' + errorData.error);
+                }
+                
+            } catch (error) {
+                log('❌ Error: ' + error.message);
+            }
+        }
+
+        function checkLocalStorage() {
+            log('=== CHECKING LOCALSTORAGE ===');
+            log('auth_token: ' + (localStorage.getItem('auth_token') ? 'EXISTS' : 'NULL'));
+            log('user_info: ' + (localStorage.getItem('user_info') ? 'EXISTS' : 'NULL'));
+            
+            const privateKey = localStorage.getItem('private_key');
+            log('private_key: ' + (privateKey ? 'EXISTS (length: ' + privateKey.length + ')' : 'NULL'));
+            
+            if (privateKey) {
+                log('Private key preview: ' + privateKey.substring(0, 50) + '...');
+            }
+        }
+
+        async function testLogin() {
+            log('=== TESTING CHAT ACCESS ===');
+            
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                log('❌ No auth token found - need to register first');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/messages/conversations', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                log('Chat API response status: ' + response.status);
+                
+                if (response.ok) {
+                    log('✅ Chat API access successful!');
+                    log('Ready to go to chat page');
+                } else {
+                    log('❌ Chat API access failed');
+                }
+                
+            } catch (error) {
+                log('❌ Chat API error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

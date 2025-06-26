@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Simple Chat{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <!-- Header -->
+                    <div class="text-center mb-4">
+                        <i class="bi bi-person-plus-fill text-primary" style="font-size: 3rem;"></i>
+                        <h2 class="card-title mt-2">Create Account</h2>
+                        <p class="text-muted">Join the encrypted chat</p>
+                    </div>
+
+                    <!-- Registration Form -->
+                    <form id="registerForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-person-fill"></i>
+                                </span>
+                                <input type="text" class="form-control" id="username" required 
+                                       placeholder="Choose a username" autocomplete="username"
+                                       pattern="[a-zA-Z0-9_]{3,20}" 
+                                       title="3-20 characters, letters, numbers and underscores only">
+                            </div>
+                            <div class="form-text">3-20 characters, letters, numbers and underscores only</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-envelope-fill"></i>
+                                </span>
+                                <input type="email" class="form-control" id="email" required 
+                                       placeholder="Enter your email" autocomplete="email">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-lock-fill"></i>
+                                </span>
+                                <input type="password" class="form-control" id="password" required 
+                                       placeholder="Create a password" autocomplete="new-password">
+                                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                    <i class="bi bi-eye-fill"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">At least 6 characters</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">Confirm Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-lock-fill"></i>
+                                </span>
+                                <input type="password" class="form-control" id="confirmPassword" required 
+                                       placeholder="Confirm your password" autocomplete="new-password">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="agreeTerms" required>
+                            <label class="form-check-label" for="agreeTerms">
+                                I agree to the terms of service
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100" id="registerBtn">
+                            <span class="btn-text">Create Account</span>
+                            <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        </button>
+                    </form>
+
+                    <!-- Divider -->
+                    <hr class="my-4">
+
+                    <!-- Login Link -->
+                    <div class="text-center">
+                        <p class="mb-0">Already have an account?</p>
+                        <a href="/login" class="btn btn-outline-primary w-100 mt-2">
+                            Sign In
+                        </a>
+                    </div>
+
+                    <!-- Security Notice -->
+                    <div class="alert alert-info mt-4">
+                        <i class="bi bi-shield-check"></i>
+                        <small>
+                            <strong>Privacy First:</strong> Your messages will be encrypted 
+                            using your personal encryption key.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Redirect if already logged in
+    if (isAuthenticated()) {
+        window.location.href = '/chat';
+    }
+
+    // Toggle password visibility
+    document.getElementById('togglePassword').addEventListener('click', function() {
+        const passwordInput = document.getElementById('password');
+        const icon = this.querySelector('i');
+        
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            icon.className = 'bi bi-eye-slash-fill';
+        } else {
+            passwordInput.type = 'password';
+            icon.className = 'bi bi-eye-fill';
+        }
+    });
+
+    // Validate password confirmation
+    document.getElementById('confirmPassword').addEventListener('input', function() {
+        const password = document.getElementById('password').value;
+        const confirmPassword = this.value;
+        
+        if (confirmPassword && password !== confirmPassword) {
+            this.setCustomValidity('Passwords do not match');
+            this.classList.add('is-invalid');
+        } else {
+            this.setCustomValidity('');
+            this.classList.remove('is-invalid');
+        }
+    });
+
+    // Handle registration form submission
+    document.getElementById('registerForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('username').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const agreeTerms = document.getElementById('agreeTerms').checked;
+        
+        // Validation
+        if (!username || !email || !password || !confirmPassword) {
+            showAlert('Please fill in all fields', 'danger');
+            return;
+        }
+        
+        if (password !== confirmPassword) {
+            showAlert('Passwords do not match', 'danger');
+            return;
+        }
+        
+        if (password.length < 6) {
+            showAlert('Password must be at least 6 characters long', 'danger');
+            return;
+        }
+        
+        if (!agreeTerms) {
+            showAlert('Please agree to the terms of service', 'danger');
+            return;
+        }
+        
+        const registerBtn = document.getElementById('registerBtn');
+        const btnText = registerBtn.querySelector('.btn-text');
+        const spinner = registerBtn.querySelector('.spinner-border');
+        
+        // Show loading state
+        btnText.textContent = 'Creating Account...';
+        spinner.classList.remove('d-none');
+        registerBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',  // Include session cookie
+                body: JSON.stringify({
+                    username: username,
+                    email: email,
+                    password: password
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                // Store user info locally
+                localStorage.setItem('user_info', JSON.stringify(data.user));
+                localStorage.setItem('encryption_key', data.encryption_key);
+                
+                showAlert('Account created successfully!', 'success');
+                
+                // Redirect to chat
+                setTimeout(() => {
+                    window.location.href = '/chat';
+                }, 1000);
+                
+            } else {
+                showAlert(data.error || 'Registration failed', 'danger');
+            }
+            
+        } catch (error) {
+            console.error('Registration error:', error);
+            showAlert('Network error. Please try again.', 'danger');
+        } finally {
+            // Reset button state
+            btnText.textContent = 'Create Account';
+            spinner.classList.add('d-none');
+            registerBtn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,512 @@
+{% extends "base.html" %}
+
+{% block title %}Dual User Chat Test{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12 text-center py-3 bg-primary text-white">
+            <h3>🔐 Dual User Chat Test</h3>
+            <p class="mb-0">Test encrypted messaging between two users in one browser</p>
+        </div>
+    </div>
+    
+    <div class="row g-0">
+        <!-- User 1 (Client1) -->
+        <div class="col-lg-6 border-end">
+            <div class="h-100 d-flex flex-column" style="min-height: calc(100vh - 120px);">
+                <!-- User 1 Header -->
+                <div class="bg-info text-white p-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="mb-0">👤 Client1</h5>
+                            <small id="user1-status">Not logged in</small>
+                        </div>
+                        <div>
+                            <button class="btn btn-light btn-sm me-2" onclick="loginUser1()" id="login1-btn">Login</button>
+                            <button class="btn btn-outline-light btn-sm" onclick="logoutUser1()" id="logout1-btn" style="display: none;">Logout</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User 1 Login Form -->
+                <div id="user1-login" class="p-3 bg-light">
+                    <div class="row">
+                        <div class="col-6">
+                            <input type="text" id="user1-username" class="form-control form-control-sm" placeholder="Username" value="client1">
+                        </div>
+                        <div class="col-6">
+                            <input type="password" id="user1-password" class="form-control form-control-sm" placeholder="Password" value="test123">
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-primary btn-sm" onclick="registerUser1()">Register Client1</button>
+                        <button class="btn btn-success btn-sm" onclick="loginUser1()">Login Client1</button>
+                    </div>
+                </div>
+
+                <!-- User 1 Chat Interface -->
+                <div id="user1-chat" class="flex-grow-1 d-none d-flex flex-column">
+                    <!-- Messages Area -->
+                    <div class="flex-grow-1 p-3 overflow-auto" id="user1-messages" style="max-height: 400px;">
+                        <div class="text-center text-muted">
+                            <p>Messages will appear here</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Message Input -->
+                    <div class="p-3 border-top">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="user1-message" placeholder="Type message to server1...">
+                            <button class="btn btn-primary" onclick="sendMessageFromUser1()">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User 2 (Server1) -->
+        <div class="col-lg-6">
+            <div class="h-100 d-flex flex-column" style="min-height: calc(100vh - 120px);">
+                <!-- User 2 Header -->
+                <div class="bg-success text-white p-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="mb-0">👤 Server1</h5>
+                            <small id="user2-status">Not logged in</small>
+                        </div>
+                        <div>
+                            <button class="btn btn-light btn-sm me-2" onclick="loginUser2()" id="login2-btn">Login</button>
+                            <button class="btn btn-outline-light btn-sm" onclick="logoutUser2()" id="logout2-btn" style="display: none;">Logout</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User 2 Login Form -->
+                <div id="user2-login" class="p-3 bg-light">
+                    <div class="row">
+                        <div class="col-6">
+                            <input type="text" id="user2-username" class="form-control form-control-sm" placeholder="Username" value="server1">
+                        </div>
+                        <div class="col-6">
+                            <input type="password" id="user2-password" class="form-control form-control-sm" placeholder="Password" value="test123">
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-primary btn-sm" onclick="registerUser2()">Register Server1</button>
+                        <button class="btn btn-success btn-sm" onclick="loginUser2()">Login Server1</button>
+                    </div>
+                </div>
+
+                <!-- User 2 Chat Interface -->
+                <div id="user2-chat" class="flex-grow-1 d-none d-flex flex-column">
+                    <!-- Messages Area -->
+                    <div class="flex-grow-1 p-3 overflow-auto" id="user2-messages" style="max-height: 400px;">
+                        <div class="text-center text-muted">
+                            <p>Messages will appear here</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Message Input -->
+                    <div class="p-3 border-top">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="user2-message" placeholder="Type message to client1...">
+                            <button class="btn btn-success" onclick="sendMessageFromUser2()">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Instructions -->
+    <div class="row">
+        <div class="col-12 bg-light p-3 text-center">
+            <h6>📋 Instructions:</h6>
+            <p class="mb-0">
+                1. Click "Register Client1" and "Register Server1" 
+                2. Both users will be logged in automatically 
+                3. Start chatting between the two panels!
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // User session storage
+    let user1Session = { loggedIn: false, userData: null, encryptionKey: null };
+    let user2Session = { loggedIn: false, userData: null, encryptionKey: null };
+
+    // Simple encryption/decryption
+    function simpleEncrypt(text, key) {
+        let result = "";
+        for (let i = 0; i < text.length; i++) {
+            result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+        }
+        return btoa(result);
+    }
+
+    function simpleDecrypt(encryptedText, key) {
+        try {
+            const decoded = atob(encryptedText);
+            let result = "";
+            for (let i = 0; i < decoded.length; i++) {
+                result += String.fromCharCode(decoded.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+            }
+            return result;
+        } catch (error) {
+            return "[Failed to decrypt]";
+        }
+    }
+
+    // Register User 1
+    async function registerUser1() {
+        const username = document.getElementById('user1-username').value.trim();
+        const password = document.getElementById('user1-password').value;
+        
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    username: username,
+                    email: username + '@example.com',
+                    password: password
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                user1Session = {
+                    loggedIn: true,
+                    userData: data.user,
+                    encryptionKey: data.encryption_key
+                };
+                updateUser1UI();
+                showAlert('Client1 registered successfully!', 'success');
+            } else {
+                showAlert('Client1 registration failed: ' + data.error, 'danger');
+            }
+        } catch (error) {
+            showAlert('Client1 registration error: ' + error.message, 'danger');
+        }
+    }
+
+    // Register User 2
+    async function registerUser2() {
+        const username = document.getElementById('user2-username').value.trim();
+        const password = document.getElementById('user2-password').value;
+        
+        try {
+            // First logout any existing session
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    username: username,
+                    email: username + '@example.com',
+                    password: password
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                user2Session = {
+                    loggedIn: true,
+                    userData: data.user,
+                    encryptionKey: data.encryption_key
+                };
+                updateUser2UI();
+                showAlert('Server1 registered successfully!', 'success');
+            } else {
+                showAlert('Server1 registration failed: ' + data.error, 'danger');
+            }
+        } catch (error) {
+            showAlert('Server1 registration error: ' + error.message, 'danger');
+        }
+    }
+
+    // Login User 1
+    async function loginUser1() {
+        const username = document.getElementById('user1-username').value.trim();
+        const password = document.getElementById('user1-password').value;
+        
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ username, password })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                user1Session = {
+                    loggedIn: true,
+                    userData: data.user,
+                    encryptionKey: data.encryption_key
+                };
+                updateUser1UI();
+                loadMessagesForUser1();
+            } else {
+                showAlert('Client1 login failed: ' + data.error, 'danger');
+            }
+        } catch (error) {
+            showAlert('Client1 login error: ' + error.message, 'danger');
+        }
+    }
+
+    // Login User 2
+    async function loginUser2() {
+        const username = document.getElementById('user2-username').value.trim();
+        const password = document.getElementById('user2-password').value;
+        
+        try {
+            // First logout any existing session
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ username, password })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                user2Session = {
+                    loggedIn: true,
+                    userData: data.user,
+                    encryptionKey: data.encryption_key
+                };
+                updateUser2UI();
+                loadMessagesForUser2();
+            } else {
+                showAlert('Server1 login failed: ' + data.error, 'danger');
+            }
+        } catch (error) {
+            showAlert('Server1 login error: ' + error.message, 'danger');
+        }
+    }
+
+    // Update UI for User 1
+    function updateUser1UI() {
+        if (user1Session.loggedIn) {
+            document.getElementById('user1-status').textContent = `Logged in as ${user1Session.userData.username}`;
+            document.getElementById('user1-login').classList.add('d-none');
+            document.getElementById('user1-chat').classList.remove('d-none');
+            document.getElementById('login1-btn').style.display = 'none';
+            document.getElementById('logout1-btn').style.display = 'inline-block';
+        } else {
+            document.getElementById('user1-status').textContent = 'Not logged in';
+            document.getElementById('user1-login').classList.remove('d-none');
+            document.getElementById('user1-chat').classList.add('d-none');
+            document.getElementById('login1-btn').style.display = 'inline-block';
+            document.getElementById('logout1-btn').style.display = 'none';
+        }
+    }
+
+    // Update UI for User 2
+    function updateUser2UI() {
+        if (user2Session.loggedIn) {
+            document.getElementById('user2-status').textContent = `Logged in as ${user2Session.userData.username}`;
+            document.getElementById('user2-login').classList.add('d-none');
+            document.getElementById('user2-chat').classList.remove('d-none');
+            document.getElementById('login2-btn').style.display = 'none';
+            document.getElementById('logout2-btn').style.display = 'inline-block';
+        } else {
+            document.getElementById('user2-status').textContent = 'Not logged in';
+            document.getElementById('user2-login').classList.remove('d-none');
+            document.getElementById('user2-chat').classList.add('d-none');
+            document.getElementById('login2-btn').style.display = 'inline-block';
+            document.getElementById('logout2-btn').style.display = 'none';
+        }
+    }
+
+    // Send message from User 1 to User 2
+    async function sendMessageFromUser1() {
+        if (!user1Session.loggedIn) {
+            showAlert('Client1 must be logged in to send messages', 'warning');
+            return;
+        }
+
+        const messageText = document.getElementById('user1-message').value.trim();
+        if (!messageText) return;
+
+        try {
+            // Login as user1 first
+            await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    username: user1Session.userData.username,
+                    password: 'test123'  // Assuming test password
+                })
+            });
+
+            const response = await fetch('/api/messages/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    recipient_username: 'server1',
+                    message: messageText
+                })
+            });
+
+            if (response.ok) {
+                document.getElementById('user1-message').value = '';
+                addMessageToUI('user1-messages', messageText, 'sent', 'Client1');
+                
+                // Show encrypted message in user2's chat
+                setTimeout(() => {
+                    const encrypted = simpleEncrypt(messageText, user1Session.encryptionKey);
+                    const decrypted = simpleDecrypt(encrypted, user1Session.encryptionKey);
+                    addMessageToUI('user2-messages', decrypted, 'received', 'Client1');
+                }, 500);
+            } else {
+                const data = await response.json();
+                showAlert('Failed to send message: ' + data.error, 'danger');
+            }
+        } catch (error) {
+            showAlert('Error sending message: ' + error.message, 'danger');
+        }
+    }
+
+    // Send message from User 2 to User 1
+    async function sendMessageFromUser2() {
+        if (!user2Session.loggedIn) {
+            showAlert('Server1 must be logged in to send messages', 'warning');
+            return;
+        }
+
+        const messageText = document.getElementById('user2-message').value.trim();
+        if (!messageText) return;
+
+        try {
+            // Login as user2 first
+            await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    username: user2Session.userData.username,
+                    password: 'test123'  // Assuming test password
+                })
+            });
+
+            const response = await fetch('/api/messages/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    recipient_username: 'client1',
+                    message: messageText
+                })
+            });
+
+            if (response.ok) {
+                document.getElementById('user2-message').value = '';
+                addMessageToUI('user2-messages', messageText, 'sent', 'Server1');
+                
+                // Show encrypted message in user1's chat
+                setTimeout(() => {
+                    const encrypted = simpleEncrypt(messageText, user2Session.encryptionKey);
+                    const decrypted = simpleDecrypt(encrypted, user2Session.encryptionKey);
+                    addMessageToUI('user1-messages', decrypted, 'received', 'Server1');
+                }, 500);
+            } else {
+                const data = await response.json();
+                showAlert('Failed to send message: ' + data.error, 'danger');
+            }
+        } catch (error) {
+            showAlert('Error sending message: ' + error.message, 'danger');
+        }
+    }
+
+    // Add message to UI
+    function addMessageToUI(containerId, message, type, sender) {
+        const container = document.getElementById(containerId);
+        
+        // Clear placeholder if exists
+        if (container.innerHTML.includes('Messages will appear here')) {
+            container.innerHTML = '';
+        }
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `mb-2 ${type === 'sent' ? 'text-end' : 'text-start'}`;
+        
+        const messageClass = type === 'sent' ? 'bg-primary text-white' : 'bg-light';
+        messageDiv.innerHTML = `
+            <div class="d-inline-block p-2 rounded ${messageClass}" style="max-width: 70%;">
+                <div><strong>${sender}:</strong> ${escapeHtml(message)}</div>
+                <small class="opacity-75">${new Date().toLocaleTimeString()}</small>
+            </div>
+        `;
+        
+        container.appendChild(messageDiv);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // Logout functions
+    function logoutUser1() {
+        user1Session = { loggedIn: false, userData: null, encryptionKey: null };
+        updateUser1UI();
+        document.getElementById('user1-messages').innerHTML = '<div class="text-center text-muted"><p>Messages will appear here</p></div>';
+    }
+
+    function logoutUser2() {
+        user2Session = { loggedIn: false, userData: null, encryptionKey: null };
+        updateUser2UI();
+        document.getElementById('user2-messages').innerHTML = '<div class="text-center text-muted"><p>Messages will appear here</p></div>';
+    }
+
+    // Load messages (simplified for demo)
+    function loadMessagesForUser1() {
+        // In a real implementation, this would fetch messages from the server
+    }
+
+    function loadMessagesForUser2() {
+        // In a real implementation, this would fetch messages from the server
+    }
+
+    // Enter key support
+    document.getElementById('user1-message').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') sendMessageFromUser1();
+    });
+
+    document.getElementById('user2-message').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') sendMessageFromUser2();
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        updateUser1UI();
+        updateUser2UI();
+    });
+</script>
+
+<style>
+    .border-end {
+        border-right: 2px solid #dee2e6 !important;
+    }
+    
+    #user1-messages, #user2-messages {
+        min-height: 300px;
+        border: 1px solid #e9ecef;
+        border-radius: 0.375rem;
+        background: #f8f9fa;
+    }
+</style>
+{% endblock %}

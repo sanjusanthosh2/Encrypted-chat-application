@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+
+{% block title %}Chat - Simple Encrypted Chat{% endblock %}
+
+{% block content %}
+<div class="container-fluid h-100">
+    <div class="row h-100">
+        <!-- Sidebar - Conversations List -->
+        <div class="col-lg-3 col-md-4 bg-light border-end">
+            <div class="d-flex flex-column h-100">
+                <!-- Search Section -->
+                <div class="p-3 border-bottom">
+                    <h5>💬 Chat</h5>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchUsers" 
+                               placeholder="Search users...">
+                        <button class="btn btn-outline-primary" type="button" onclick="searchUsers()">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Conversations List -->
+                <div class="flex-grow-1 overflow-auto" id="conversationsList">
+                    <div class="text-center text-muted p-4" id="noConversations">
+                        <i class="bi bi-chat-dots" style="font-size: 2rem;"></i>
+                        <p class="mt-2">No conversations yet</p>
+                        <small>Search for users to start chatting</small>
+                    </div>
+                </div>
+
+                <!-- User Info -->
+                <div class="p-3 border-top bg-white">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0" id="currentUsername">Loading...</h6>
+                            <small class="text-success">
+                                <i class="bi bi-shield-check"></i>
+                                Encrypted Chat
+                            </small>
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm" onclick="logout()">
+                            <i class="bi bi-box-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="col-lg-9 col-md-8">
+            <div class="d-flex flex-column h-100">
+                <!-- Welcome Screen -->
+                <div class="flex-grow-1 d-flex align-items-center justify-content-center" id="welcomeScreen">
+                    <div class="text-center">
+                        <i class="bi bi-chat-square-text text-primary" style="font-size: 4rem;"></i>
+                        <h3 class="mt-3">Welcome to Encrypted Chat</h3>
+                        <p class="text-muted">Select a user to start messaging</p>
+                        <div class="alert alert-info d-inline-block">
+                            <i class="bi bi-shield-lock"></i>
+                            Your messages are encrypted for privacy
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Interface (Hidden initially) -->
+                <div class="d-none" id="chatInterface">
+                    <!-- Chat Header -->
+                    <div class="bg-primary text-white p-3 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <h5 class="mb-0" id="chatWithUser">Chat</h5>
+                                <small>
+                                    <i class="bi bi-shield-lock-fill"></i>
+                                    End-to-end encrypted
+                                </small>
+                            </div>
+                            <button class="btn btn-light btn-sm" onclick="refreshMessages()">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Messages Area -->
+                    <div class="flex-grow-1 overflow-auto p-3" id="messagesArea" style="height: calc(100vh - 200px);">
+                        <!-- Messages will be loaded here -->
+                    </div>
+
+                    <!-- Message Input -->
+                    <div class="bg-white border-top p-3">
+                        <form id="sendMessageForm" onsubmit="sendMessage(event)">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="messageText" 
+                                       placeholder="Type your message..." autocomplete="off" maxlength="500">
+                                <button class="btn btn-primary" type="submit" id="sendBtn">
+                                    <i class="bi bi-send-fill"></i>
+                                    Send
+                                </button>
+                            </div>
+                        </form>
+                        <small class="text-muted">
+                            <i class="bi bi-shield-check text-success"></i>
+                            Messages are encrypted before sending
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search Results Modal -->
+<div class="modal fade" id="searchModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Search Users</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="searchResults">
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-person-search"></i>
+                        <p class="mt-2">Search for users to start chatting</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Global variables
+    let currentChatUser = null;
+    let currentUser = null;
+    let encryptionKey = null;
+    let conversations = [];
+    let messages = [];
+
+    // Simple encryption/decryption functions
+    function simpleEncrypt(text, key) {
+        let result = "";
+        for (let i = 0; i < text.length; i++) {
+            result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+        }
+        return btoa(result);
+    }
+
+    function simpleDecrypt(encryptedText, key) {
+        try {
+            const decoded = atob(encryptedText);
+            let result = "";
+            for (let i = 0; i < decoded.length; i++) {
+                result += String.fromCharCode(decoded.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+            }
+            return result;
+        } catch (error) {
+            return "[Failed to decrypt]";
+        }
+    }
+
+    // Initialize chat
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check authentication
+        if (!isAuthenticated()) {
+            window.location.href = '/login';
+            return;
+        }
+
+        loadUserInfo();
+        loadConversations();
+        
+        // Auto-refresh conversations every 30 seconds
+        setInterval(loadConversations, 30000);
+    });
+
+    async function loadUserInfo() {
+        try {
+            // Try to get current user info from server
+            const response = await fetchWithAuth('/api/auth/me');
+            
+            if (response.ok) {
+                const data = await response.json();
+                currentUser = data.user;
+                encryptionKey = data.encryption_key;
+                
+                // Update localStorage
+                localStorage.setItem('user_info', JSON.stringify(data.user));
+                localStorage.setItem('encryption_key', data.encryption_key);
+                
+                document.getElementById('currentUsername').textContent = data.user.username;
+            } else {
+                // Fallback to localStorage
+                const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+                encryptionKey = localStorage.getItem('encryption_key');
+                
+                if (!encryptionKey) {
+                    showAlert('Session expired. Please login again.', 'warning');
+                    setTimeout(() => logout(), 2000);
+                    return;
+                }
+
+                currentUser = userInfo;
+                document.getElementById('currentUsername').textContent = userInfo.username || 'Unknown';
+            }
+        } catch (error) {
+            console.error('Error loading user info:', error);
+            showAlert('Failed to load user information', 'danger');
+        }
+    }
+
+    async function searchUsers() {
+        const query = document.getElementById('searchUsers').value.trim();
+        
+        if (query.length < 2) {
+            showAlert('Please enter at least 2 characters', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetchWithAuth(`/api/users/search?q=${encodeURIComponent(query)}`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                displaySearchResults(data.users);
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('searchModal'));
+                modal.show();
+            } else {
+                showAlert('Search failed', 'danger');
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+            showAlert('Search failed', 'danger');
+        }
+    }
+
+    function displaySearchResults(users) {
+        const container = document.getElementById('searchResults');
+        
+        if (users.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-person-x"></i>
+                    <p class="mt-2">No users found</p>
+                </div>
+            `;
+            return;
+        }
+
+        const usersHTML = users.map(user => `
+            <div class="d-flex align-items-center p-2 border rounded mb-2 hover-bg-light" style="cursor: pointer;" onclick="startChat('${user.username}')">
+                <div class="flex-grow-1">
+                    <h6 class="mb-0">${escapeHtml(user.username)}</h6>
+                    <small class="text-muted">${escapeHtml(user.email)}</small>
+                </div>
+                <i class="bi bi-chat-dots text-primary"></i>
+            </div>
+        `).join('');
+
+        container.innerHTML = usersHTML;
+    }
+
+    function startChat(username) {
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('searchModal'));
+        if (modal) modal.hide();
+        
+        // Clear search
+        document.getElementById('searchUsers').value = '';
+        
+        // Open chat
+        openChat(username);
+    }
+
+    async function openChat(username) {
+        if (currentChatUser === username) return;
+        
+        currentChatUser = username;
+        
+        // Show chat interface
+        document.getElementById('welcomeScreen').classList.add('d-none');
+        document.getElementById('chatInterface').classList.remove('d-none');
+        document.getElementById('chatInterface').classList.add('d-flex', 'flex-column', 'h-100');
+        
+        // Update header
+        document.getElementById('chatWithUser').textContent = `Chat with ${username}`;
+        
+        // Load messages
+        await loadMessages(username);
+        
+        // Auto-refresh messages every 5 seconds
+        if (window.messageRefreshInterval) {
+            clearInterval(window.messageRefreshInterval);
+        }
+        window.messageRefreshInterval = setInterval(() => loadMessages(username), 5000);
+    }
+
+    async function loadMessages(username) {
+        try {
+            const response = await fetchWithAuth(`/api/messages/${username}`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                messages = data.messages;
+                displayMessages();
+            } else {
+                console.error('Failed to load messages');
+            }
+        } catch (error) {
+            console.error('Error loading messages:', error);
+        }
+    }
+
+    function displayMessages() {
+        const messagesArea = document.getElementById('messagesArea');
+        
+        if (messages.length === 0) {
+            messagesArea.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="bi bi-chat-square-text" style="font-size: 2rem;"></i>
+                    <p class="mt-2">No messages yet</p>
+                    <small>Start the conversation by sending a message</small>
+                </div>
+            `;
+            return;
+        }
+
+        let messagesHTML = '';
+        
+        for (const message of messages) {
+            const isOwnMessage = message.is_own_message;
+            const decryptedContent = simpleDecrypt(message.encrypted_content, message.encryption_key);
+            
+            const messageClass = isOwnMessage ? 'message-sent' : 'message-received';
+            const alignClass = isOwnMessage ? 'text-end' : 'text-start';
+            
+            messagesHTML += `
+                <div class="mb-3 ${alignClass}">
+                    <div class="message ${messageClass} d-inline-block p-3 rounded shadow-sm">
+                        <div class="message-content">${escapeHtml(decryptedContent)}</div>
+                        <small class="message-time text-muted d-block mt-1">
+                            ${new Date(message.timestamp).toLocaleString()}
+                            ${isOwnMessage ? '<i class="bi bi-check-all text-success"></i>' : ''}
+                        </small>
+                    </div>
+                </div>
+            `;
+        }
+
+        messagesArea.innerHTML = messagesHTML;
+        messagesArea.scrollTop = messagesArea.scrollHeight;
+    }
+
+    async function sendMessage(event) {
+        event.preventDefault();
+        
+        const messageText = document.getElementById('messageText').value.trim();
+        if (!messageText || !currentChatUser) return;
+        
+        const sendBtn = document.getElementById('sendBtn');
+        const originalHTML = sendBtn.innerHTML;
+        
+        // Show loading state
+        sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
+        sendBtn.disabled = true;
+        
+        try {
+            const response = await fetchWithAuth('/api/messages/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    recipient_username: currentChatUser,
+                    message: messageText
+                })
+            });
+            
+            if (response.ok) {
+                document.getElementById('messageText').value = '';
+                await loadMessages(currentChatUser);
+                await loadConversations();
+            } else {
+                const data = await response.json();
+                showAlert(data.error || 'Failed to send message', 'danger');
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            showAlert('Failed to send message', 'danger');
+        } finally {
+            sendBtn.innerHTML = originalHTML;
+            sendBtn.disabled = false;
+        }
+    }
+
+    async function loadConversations() {
+        try {
+            const response = await fetchWithAuth('/api/messages/conversations');
+            
+            if (response.ok) {
+                const data = await response.json();
+                conversations = data.conversations;
+                updateConversationsList();
+            }
+        } catch (error) {
+            console.error('Error loading conversations:', error);
+        }
+    }
+
+    function updateConversationsList() {
+        const container = document.getElementById('conversationsList');
+        const noConversations = document.getElementById('noConversations');
+        
+        if (conversations.length === 0) {
+            noConversations.style.display = 'block';
+            return;
+        }
+
+        noConversations.style.display = 'none';
+
+        const conversationsHTML = conversations.map(conv => {
+            const user = conv.user;
+            const isActive = currentChatUser === user.username;
+            
+            return `
+                <div class="conversation-item p-3 border-bottom ${isActive ? 'bg-primary bg-opacity-10' : ''}" 
+                     onclick="openChat('${user.username}')" style="cursor: pointer;">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${escapeHtml(user.username)}</h6>
+                            <small class="text-muted">
+                                <i class="bi bi-shield-check text-success"></i>
+                                Encrypted conversation
+                            </small>
+                        </div>
+                        <i class="bi bi-chevron-right text-muted"></i>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = conversationsHTML;
+    }
+
+    function refreshMessages() {
+        if (currentChatUser) {
+            loadMessages(currentChatUser);
+        }
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Enter key support
+    document.getElementById('messageText').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage(e);
+        }
+    });
+
+    // Search on Enter
+    document.getElementById('searchUsers').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchUsers();
+        }
+    });
+</script>
+
+<style>
+    .conversation-item:hover {
+        background-color: rgba(13, 110, 253, 0.1) !important;
+    }
+
+    .message-sent {
+        background-color: #007bff;
+        color: white;
+        max-width: 70%;
+        margin-left: auto;
+    }
+
+    .message-received {
+        background-color: #e9ecef;
+        color: #212529;
+        max-width: 70%;
+    }
+
+    .hover-bg-light:hover {
+        background-color: #f8f9fa;
+    }
+
+    #messagesArea {
+        max-height: calc(100vh - 200px);
+    }
+
+    #messagesArea::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #messagesArea::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    #messagesArea::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+</style>
+{% endblock %}

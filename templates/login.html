@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Simple Chat{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <!-- Header -->
+                    <div class="text-center mb-4">
+                        <i class="bi bi-shield-lock-fill text-primary" style="font-size: 3rem;"></i>
+                        <h2 class="card-title mt-2">Welcome Back</h2>
+                        <p class="text-muted">Sign in to your encrypted chat</p>
+                    </div>
+
+                    <!-- Login Form -->
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-person-fill"></i>
+                                </span>
+                                <input type="text" class="form-control" id="username" required 
+                                       placeholder="Enter your username" autocomplete="username">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-lock-fill"></i>
+                                </span>
+                                <input type="password" class="form-control" id="password" required 
+                                       placeholder="Enter your password" autocomplete="current-password">
+                                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                    <i class="bi bi-eye-fill"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="rememberMe">
+                            <label class="form-check-label" for="rememberMe">
+                                Remember me
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100" id="loginBtn">
+                            <span class="btn-text">Sign In</span>
+                            <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        </button>
+                    </form>
+
+                    <!-- Divider -->
+                    <hr class="my-4">
+
+                    <!-- Register Link -->
+                    <div class="text-center">
+                        <p class="mb-0">Don't have an account?</p>
+                        <a href="/register" class="btn btn-outline-primary w-100 mt-2">
+                            Create Account
+                        </a>
+                    </div>
+
+                    <!-- Test Users Info -->
+                    <div class="card mt-3 bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="bi bi-info-circle"></i>
+                                Test the App
+                            </h6>
+                            <p class="small text-muted mb-2">
+                                Create two accounts to test the encrypted chat:
+                            </p>
+                            <ol class="small text-muted">
+                                <li>Register a "client1" account</li>
+                                <li>Open incognito window</li>
+                                <li>Register a "server1" account</li>
+                                <li>Start chatting!</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Redirect if already logged in
+    if (isAuthenticated()) {
+        window.location.href = '/chat';
+    }
+
+    // Toggle password visibility
+    document.getElementById('togglePassword').addEventListener('click', function() {
+        const passwordInput = document.getElementById('password');
+        const icon = this.querySelector('i');
+        
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            icon.className = 'bi bi-eye-slash-fill';
+        } else {
+            passwordInput.type = 'password';
+            icon.className = 'bi bi-eye-fill';
+        }
+    });
+
+    // Handle login form submission
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+        const rememberMe = document.getElementById('rememberMe').checked;
+        
+        if (!username || !password) {
+            showAlert('Please fill in all fields', 'danger');
+            return;
+        }
+        
+        const loginBtn = document.getElementById('loginBtn');
+        const btnText = loginBtn.querySelector('.btn-text');
+        const spinner = loginBtn.querySelector('.spinner-border');
+        
+        // Show loading state
+        btnText.textContent = 'Signing In...';
+        spinner.classList.remove('d-none');
+        loginBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',  // Include session cookie
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                // Store user info locally
+                localStorage.setItem('user_info', JSON.stringify(data.user));
+                localStorage.setItem('encryption_key', data.encryption_key);
+                
+                if (rememberMe) {
+                    localStorage.setItem('remember_user', username);
+                }
+                
+                showAlert('Login successful!', 'success');
+                
+                // Redirect to chat
+                setTimeout(() => {
+                    window.location.href = '/chat';
+                }, 1000);
+                
+            } else {
+                showAlert(data.error || 'Login failed', 'danger');
+            }
+            
+        } catch (error) {
+            console.error('Login error:', error);
+            showAlert('Network error. Please try again.', 'danger');
+        } finally {
+            // Reset button state
+            btnText.textContent = 'Sign In';
+            spinner.classList.add('d-none');
+            loginBtn.disabled = false;
+        }
+    });
+
+    // Auto-fill remembered username
+    document.addEventListener('DOMContentLoaded', function() {
+        const rememberedUser = localStorage.getItem('remember_user');
+        if (rememberedUser) {
+            document.getElementById('username').value = rememberedUser;
+            document.getElementById('password').focus();
+        }
+    });
+</script>
+{% endblock %}

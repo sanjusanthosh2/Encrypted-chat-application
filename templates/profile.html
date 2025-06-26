@@ -1,0 +1,512 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Encrypted Chat{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <!-- Profile Information -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-person-circle"></i>
+                        Profile Information
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Username</label>
+                                <div class="form-control-plaintext" id="profileUsername">Loading...</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Email</label>
+                                <div class="form-control-plaintext" id="profileEmail">Loading...</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Member Since</label>
+                                <div class="form-control-plaintext" id="profileCreated">Loading...</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Last Seen</label>
+                                <div class="form-control-plaintext" id="profileLastSeen">Loading...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-shield-check"></i>
+                        <strong>Account Status:</strong> Active and Secured with End-to-End Encryption
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security & Keys -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-shield-lock"></i>
+                        Security
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Encryption Status</label>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-shield-fill-check text-success me-2"></i>
+                            <span class="text-success">Active</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Key Type</label>
+                        <div>RSA-2048 + AES-256</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Key Fingerprint</label>
+                        <div class="font-monospace small text-break" id="keyFingerprint">
+                            Loading...
+                        </div>
+                    </div>
+
+                    <button class="btn btn-outline-primary w-100 mb-2" onclick="showPublicKey()">
+                        <i class="bi bi-key"></i>
+                        View Public Key
+                    </button>
+                    
+                    <button class="btn btn-outline-warning w-100 mb-2" onclick="exportPrivateKey()">
+                        <i class="bi bi-download"></i>
+                        Export Private Key
+                    </button>
+
+                    <button class="btn btn-outline-danger w-100" onclick="regenerateKeys()">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        Regenerate Keys
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up"></i>
+                        Usage Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="stat-item">
+                                <h3 class="text-primary" id="statMessages">0</h3>
+                                <p class="text-muted mb-0">Messages Sent</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-item">
+                                <h3 class="text-success" id="statConversations">0</h3>
+                                <p class="text-muted mb-0">Conversations</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-item">
+                                <h3 class="text-info" id="statDataEncrypted">0 KB</h3>
+                                <p class="text-muted mb-0">Data Encrypted</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-item">
+                                <h3 class="text-warning" id="statUptime">0 days</h3>
+                                <p class="text-muted mb-0">Account Age</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Settings -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear"></i>
+                        Security Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Private Key Storage</h6>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="keyStorage" id="localStorage" checked disabled>
+                                <label class="form-check-label" for="localStorage">
+                                    Browser Local Storage (Current)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="keyStorage" id="downloadKey" disabled>
+                                <label class="form-check-label" for="downloadKey">
+                                    Download and Clear (Coming Soon)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Session Management</h6>
+                            <button class="btn btn-outline-warning w-100 mb-2" onclick="showActiveSessions()">
+                                <i class="bi bi-list"></i>
+                                View Active Sessions
+                            </button>
+                            <button class="btn btn-outline-danger w-100" onclick="logoutAllSessions()">
+                                <i class="bi bi-x-circle"></i>
+                                Logout All Sessions
+                            </button>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <strong>Important:</strong> Your private key is stored locally in your browser. 
+                        Make sure to export and backup your private key before clearing browser data.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Public Key Modal -->
+<div class="modal fade" id="publicKeyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-key"></i>
+                    Public Key
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">
+                    This is your public key that others use to encrypt messages sent to you. 
+                    You can safely share this key.
+                </p>
+                <textarea class="form-control font-monospace small" id="publicKeyText" 
+                          rows="10" readonly></textarea>
+                <div class="mt-3">
+                    <button class="btn btn-primary" onclick="copyPublicKey()">
+                        <i class="bi bi-clipboard"></i>
+                        Copy to Clipboard
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="downloadPublicKey()">
+                        <i class="bi bi-download"></i>
+                        Download
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Private Key Export Modal -->
+<div class="modal fade" id="privateKeyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Export Private Key
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <strong>WARNING:</strong> Your private key allows anyone to decrypt your messages. 
+                    Keep it secure and never share it with anyone!
+                </div>
+                
+                <p>Please confirm your password to export your private key:</p>
+                
+                <form id="exportKeyForm">
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="confirmPasswordExport" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-download"></i>
+                        Export Private Key
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Regeneration Modal -->
+<div class="modal fade" id="regenerateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Regenerate Keys
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <strong>WARNING:</strong> Regenerating your keys will make all previous messages 
+                    unreadable. This action cannot be undone!
+                </div>
+                
+                <p>Type <strong>CONFIRM</strong> to proceed:</p>
+                
+                <form id="regenerateForm">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="confirmRegenerate" 
+                               placeholder="Type CONFIRM" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        Regenerate Keys
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let userProfile = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check authentication
+        if (!getAuthToken()) {
+            window.location.href = '/login';
+            return;
+        }
+
+        loadProfile();
+        setupEventListeners();
+    });
+
+    function setupEventListeners() {
+        // Export key form
+        document.getElementById('exportKeyForm').addEventListener('submit', handleExportKey);
+        
+        // Regenerate keys form
+        document.getElementById('regenerateForm').addEventListener('submit', handleRegenerateKeys);
+    }
+
+    async function loadProfile() {
+        try {
+            const response = await fetchWithAuth('/api/auth/profile');
+            
+            if (response.ok) {
+                const data = await response.json();
+                userProfile = data.user;
+                updateProfileDisplay();
+                calculateFingerprint();
+                loadStatistics();
+            } else {
+                showAlert('Failed to load profile', 'danger');
+            }
+        } catch (error) {
+            console.error('Profile load error:', error);
+            showAlert('Failed to load profile', 'danger');
+        }
+    }
+
+    function updateProfileDisplay() {
+        if (!userProfile) return;
+
+        document.getElementById('profileUsername').textContent = userProfile.username;
+        document.getElementById('profileEmail').textContent = userProfile.email;
+        document.getElementById('profileCreated').textContent = 
+            new Date(userProfile.created_at).toLocaleDateString();
+        document.getElementById('profileLastSeen').textContent = 
+            new Date(userProfile.last_seen).toLocaleString();
+    }
+
+    function calculateFingerprint() {
+        if (!userProfile?.public_key) return;
+
+        // Simple fingerprint calculation (in real app, use proper hash)
+        const publicKey = userProfile.public_key;
+        let hash = 0;
+        for (let i = 0; i < publicKey.length; i++) {
+            const char = publicKey.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        
+        const fingerprint = Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
+        const formattedFingerprint = fingerprint.match(/.{2}/g).join(':');
+        
+        document.getElementById('keyFingerprint').textContent = formattedFingerprint;
+    }
+
+    function loadStatistics() {
+        if (!userProfile) return;
+
+        // Mock statistics - in real app, fetch from API
+        const createdDate = new Date(userProfile.created_at);
+        const daysSinceCreation = Math.floor((new Date() - createdDate) / (1000 * 60 * 60 * 24));
+
+        document.getElementById('statMessages').textContent = Math.floor(Math.random() * 100);
+        document.getElementById('statConversations').textContent = Math.floor(Math.random() * 10);
+        document.getElementById('statDataEncrypted').textContent = Math.floor(Math.random() * 500) + ' KB';
+        document.getElementById('statUptime').textContent = daysSinceCreation + ' days';
+    }
+
+    function showPublicKey() {
+        if (!userProfile?.public_key) {
+            showAlert('Public key not available', 'danger');
+            return;
+        }
+
+        document.getElementById('publicKeyText').value = userProfile.public_key;
+        const modal = new bootstrap.Modal(document.getElementById('publicKeyModal'));
+        modal.show();
+    }
+
+    function copyPublicKey() {
+        const textarea = document.getElementById('publicKeyText');
+        textarea.select();
+        document.execCommand('copy');
+        showAlert('Public key copied to clipboard', 'success');
+    }
+
+    function downloadPublicKey() {
+        if (!userProfile?.public_key) return;
+
+        const blob = new Blob([userProfile.public_key], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${userProfile.username}_public_key.pem`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function exportPrivateKey() {
+        const modal = new bootstrap.Modal(document.getElementById('privateKeyModal'));
+        modal.show();
+    }
+
+    async function handleExportKey(e) {
+        e.preventDefault();
+        
+        const password = document.getElementById('confirmPasswordExport').value;
+        
+        if (!password) {
+            showAlert('Password is required', 'danger');
+            return;
+        }
+
+        // In a real implementation, verify password with server
+        // For demo, we'll just check if private key exists
+        const privateKey = localStorage.getItem('private_key');
+        
+        if (!privateKey) {
+            showAlert('Private key not found in local storage', 'danger');
+            return;
+        }
+
+        // Download private key
+        const blob = new Blob([privateKey], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${userProfile.username}_private_key.pem`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('privateKeyModal'));
+        modal.hide();
+
+        showAlert('Private key exported successfully', 'success');
+    }
+
+    function regenerateKeys() {
+        const modal = new bootstrap.Modal(document.getElementById('regenerateModal'));
+        modal.show();
+    }
+
+    async function handleRegenerateKeys(e) {
+        e.preventDefault();
+        
+        const confirmation = document.getElementById('confirmRegenerate').value;
+        
+        if (confirmation !== 'CONFIRM') {
+            showAlert('Please type CONFIRM to proceed', 'danger');
+            return;
+        }
+
+        showAlert('Key regeneration is not implemented in this demo', 'warning');
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('regenerateModal'));
+        modal.hide();
+    }
+
+    function showActiveSessions() {
+        showAlert('Session management is not implemented in this demo', 'info');
+    }
+
+    function logoutAllSessions() {
+        if (confirm('This will log you out of all devices. Continue?')) {
+            logout();
+        }
+    }
+</script>
+
+<style>
+    .stat-item {
+        padding: 1rem;
+        border-right: 1px solid #dee2e6;
+    }
+
+    .stat-item:last-child {
+        border-right: none;
+    }
+
+    .form-control-plaintext {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 0.375rem 0.75rem;
+    }
+</style>
+{% endblock %}
