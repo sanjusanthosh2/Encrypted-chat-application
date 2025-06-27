@@ -28,7 +28,7 @@ def create_app(config_name=None):
 # Create Flask app
 app = create_app()
 
-# Simple encryption for demo (not for production)
+# Simple encryption 
 def simple_encrypt(text, key):
     """Simple XOR encryption for demo purposes"""
     result = ""
